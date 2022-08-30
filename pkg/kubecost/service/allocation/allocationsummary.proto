@@ -1,0 +1,292 @@
+syntax = "proto3";
+
+// Update the version for breaking changes to the API.
+package kubecost.service.allocation.allocationsummary.v1;
+
+option go_package = "github.com/opencost/opencost/pkg/kubecost/service/allocation/allocationsummary";
+
+// Handles the Allocation Summary Requests.
+service AllocationSummary {
+    // An RPC for allocation Summary.
+    //
+    // Streams the Lists of AllocationSummary that satisfies the requested window,
+    // aggregation on ,filter selection and other parameters passed in the Request.
+    rpc ListAllocationSummary (AllocationSummaryRequest) returns (stream AllocationSummaryResponse) {}
+}
+
+// Window represents the requested data range for the Allocation Summary data.
+message Window{
+    // window can either be absolute window or relative window.
+    oneof window{
+        AbsoluteWindow absolute_window = 1;
+        RelativeWindow relative_window = 2;
+    }
+}
+
+// Absolute Window represents an absolute date range with start and end dates.
+message AbsoluteWindow {
+    // For example:
+    // {
+    //    "window":
+    //        {"absolute_window": {
+    //                "start": "2022-08-14T00:00:00Z,",
+    //                "end": "2021-08-21T00:00:00Z"}"}
+    // }
+    // accepted value are comma-separated RFC3339 date.
+    // Start of the requested Date range of Allocation Summary.
+    string start = 1;
+
+    // End of the requested Date range of Allocation Summary.
+    string end = 2;
+}
+
+// Relative window represents duration for the requested data.
+message RelativeWindow {
+    // For example:
+    // {
+    //    "window":
+    //                {"relative_window": {"duration":"24h"
+    // }
+    // Accepts: words like today, week, month, yesterday, lastweek,
+    // lastmonth; durations like 30m, 12h, 7d and others.
+    // duration of the requested Date range of Allocation Summary Data.
+    string duration = 1;
+}
+
+// An Enum for aggregate by selection.
+enum AggrgateType{
+    AGGREGATE_TYPE_UNSPECIFIED = 0;
+    AGGREGATE_TYPE_CLUSTER = 1;
+    AGGREGATE_TYPE_CONTAINER = 2;
+    AGGREGATE_TYPE_CONTROLLER = 3;
+    AGGREGATE_TYPE_CONTROLLER_KIND = 4;
+    AGGREGATE_TYPE_DAEMONSET = 5;
+    AGGREGATE_TYPE_DEPARTMENT = 6;
+    AGGREGATE_TYPE_ENVIRONMENT = 7;
+    AGGREGATE_TYPE_JOB = 8;
+    AGGREGATE_TYPE_NAMESPACE = 9;
+    AGGREGATE_TYPE_NODE = 10;
+    AGGREGATE_TYPE_OWNER = 11;
+    AGGREGATE_TYPE_POD = 12;
+    AGGREGATE_TYPE_PRODUCT = 13;
+    AGGREGATE_TYPE_SERVICE = 14;
+    AGGREGATE_TYPE_STATEFULSET = 15;
+    AGGREGATE_TYPE_TEAM = 16;
+}
+
+// An Enum for split the Idle cost in Allocation Summary.
+enum IdleCostsType {
+    IDLE_COSTS_TYPE_UNSPECIFIED = 0;
+    IDLE_COSTS_TYPE_HIDE = 1;
+    IDLE_COSTS_TYPE_SEPARATE = 2;
+    IDLE_COSTS_TYPE_SHARE_BY_CLUSTER = 3;
+    IDLE_COSTS_TYPE_SHARE_BY_NODE = 4;
+}
+
+// An Enum to select the cost metrics for the Allocation Summary.
+enum CostMetricType{
+    COST_METRIC_UNSPECIFIED = 0;
+    COST_METRIC_CUMULATIVE_COST = 1;
+    COST_METRIC_MONTHLY_RATE = 2;
+    COST_METRIC_DAILY_RATE = 3;
+    COST_METRIC_HOURLY_RATE = 4;
+}
+
+// Message having the filterV1 Selection.
+message FilterV1{
+    repeated Filters filterV1 = 1;
+}
+
+// Filter Selection represents the v1 filter for the Allocation Summary Request.
+message Filters{
+    enum FilterType{
+        FILTER_TYPE_UNSPECIFIED = 0;
+        FILTER_TYPE_CLUSTERS = 1;
+        FILTER_TYPE_NODES = 2;
+        FILTER_TYPE_NAMESPACES = 3;
+        FILTER_TYPE_CONTROLLER_KINDS = 4;
+        FILTER_TYPE_CONTROLLERS = 5;
+        FILTER_TYPE_PODS = 6;
+        FILTER_TYPE_ANNOTATIONS = 7;
+        FILTER_TYPE_LABELS = 8;
+        FILTER_TYPE_SERVICES = 9;
+    }
+    // For example: {"filter":{"filtersV1": [{"FILTER_TYPE_CLUSTERS":["clusterA",
+    // "clusterB"]},{"FILTER_TYPE_NAMESPACES":["NameSpaceA", "NameSpaceB"]}]}}
+    //  to filter data of only clusterA
+    // and clusterB and Namespace A and B.
+    // The Type of Filter selected on the Allocation Summary Data
+    FilterType type = 1;
+    // Value assigned to the Filter which is repeated
+    repeated string value = 2;
+}
+
+// Enum for the shared split which can either be weighted or even.
+enum ShareSplit {
+    SHARE_SPLIT_UNSPECIFIED = 0;
+    SHARESPLIT_WEIGHTED = 1;
+    SHARESPLIT_EVEN = 2;
+}
+
+// Resource for different shared selection available for the user on the User Interface.
+message SharedSelection {
+    // share the cluster overhead assets with non-idle allocations.
+    bool shared_tenancy_costs = 1;
+
+    // list of namespaces to share the cost with non-idle allocations.
+    repeated string custom_shared_namespaces= 2;
+
+    // list of labels to share the cost with non-idle allocations.
+    repeated string custom_shared_labels = 3;
+
+    // Cost to be shared with other non-idle allocations.
+    double custom_shared_overhead_cost = 4;
+
+    // Handle Unshared Allocations with non-idle allocations.
+    ShareSplit shared_split = 5;
+}
+
+// AllocationSummaryRequest is the request to list Allocation Summary Data
+message AllocationSummaryRequest {
+    // Window for which the Allocation Summary is requested
+    Window window = 1;
+
+    // Starting index of the first Allocation Summary Data
+    int32 result_start_index = 2;
+
+    // Maximum number of results of Allocation Summary Data
+    int32 max_num_results = 3;
+
+
+    // Aggregation of Allocation Summary requested on.
+    // For example: {"aggregate_by": [9,12]} or
+    // {"aggregate_by": [AGGREGATE_TYPE_NAMESPACE,AGGREGATE_TYPE_POD]}
+    // to aggregate on namespace and pod
+    repeated AggrgateType aggregate_by = 4;
+
+    // Selection of Idle cost on Allocation Summary.
+    IdleCostsType idle_costs = 5;
+
+    // Selection of Cost Metrics on Allocation Summary.
+    // For example: {"cost_metrics": 1} or  {"cost_metrics": COST_METRIC_CUMULATIVE_COST }
+    // to display Allocation Summary with cumulative cost
+    CostMetricType cost_metrics = 6;
+
+    // Filters applied on the Allocation Summary Data.
+    oneof filter{
+        FilterV1 filterV1 = 7;
+        string filterV2 = 8;
+    }
+
+    // decision to be made for the Shared Resources on Allocation Summary data.
+    SharedSelection shared_resources = 9;
+
+}
+
+// message for progress updates during the API call.
+message AllocationSummaryProgressUpdate {
+    // Represent the percentage completion of Allocation Summary Streaming
+    float percent_complete = 1;
+}
+
+// Message reprenting the time window for which graph items are listed
+// in the visualization.
+message DateRange{
+    // The start of the time range of the collected graph items
+    string start = 1;
+
+    // The end of the time range of the collected graph items
+    string end = 2;
+}
+
+// Message containing the information about each kubernetes resource
+// that is used to display in graph visualization.
+message Resource{
+    // Name of the Kubernetes Resource.
+    string name = 1;
+
+    // Cost of the Kubernetes Resource.
+    float cost = 2;
+
+    // Efficiency of the Kubernetes Resource.
+    float efficiency = 3;
+
+}
+
+// Message containing each bar graph entry over a specific Date range.
+message TimeSeriesGraphItem{
+    // The Data Range for which the graph data has to be displayed.
+    DateRange date_range = 1;
+
+    // represents the top graph_top_results values for the corresponding Data range and
+    // an additional entry that will be aggregate of all the other kubernetes resources.
+    repeated Resource value = 2;
+}
+
+// Resource for the Graph Data to be displayed in each Visualization.
+message GraphData {
+    // The list of Graph items for the requested Allocation Summary Request.
+    repeated TimeSeriesGraphItem graph_items = 1;
+
+    // Represents how many graph items should be shown while hovering each bar graph.
+    // All the other remaining graph items will be aggregate under a keyword others.
+    int32 graph_top_results = 2;
+}
+
+// message for each allocation summary Item
+message SummaryTableItem {
+    //Name of the Allocation Summary Table Item representing the Kubernetes Resource.
+    string name = 1;
+
+    // CPU Cost associated with the Kubenetes Resource.
+    double cpu_cost = 2;
+
+    // GPU Cost associated with the Kubenetes Resource.
+    double gpu_cost = 3;
+
+    // RAM Cost associated with the Kubenetes Resource.
+    double ram_cost = 4;
+
+    // Persistent Volume Cost associated with the Kubenetes Resource.
+    double pv_cost = 5;
+
+    // NetWork Cost associated with the Kubenetes Resource.
+    double network_cost = 6;
+
+    // LoadBalancer Cost associated with the Kubenetes Resource.
+    double loadBalancer_cost = 7;
+
+    // Shared Cost associated with the Kubenetes Resource.
+    double shared_cost = 8;
+
+    // External Cost associated with the Kubenetes Resource.
+    double external_cost = 9;
+
+    // Efficiency of the Kubenetes Resource.
+    float efficiency = 10;
+
+    // Total Cost associated with the Kubenetes Resource.
+    double total_cost = 11;
+}
+
+// message for complete allocation summary response.
+message FinalAllocationSummaryResponse {
+    // Represents the Graph data for the allocation summary visualization.
+    GraphData graph_data = 1;
+
+    // The Table entry corresponding to Totals in Allocation Summary Table.
+    SummaryTableItem total_item = 2;
+
+    // returns the result_start_index to max_num_results from that index requested in the
+    // Allocation Summary Request.
+    repeated SummaryTableItem each_table_items = 3;
+}
+
+// message for the allocationsummary response can either be partial response
+// which contains percentage Completion or complete allocation response having all the details
+message AllocationSummaryResponse {
+    oneof response{
+        AllocationSummaryProgressUpdate status_update = 1;
+        FinalAllocationSummaryResponse final_allocation_summary_response = 2;
+    }
+}
