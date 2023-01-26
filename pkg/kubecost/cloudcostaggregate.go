@@ -86,6 +86,15 @@ type CloudCostAggregate struct {
 	Credit            float64                      `json:"credit"`
 }
 
+func NewCloudCostAggregate(properties CloudCostAggregateProperties, kubernetesPercent, cost, credit float64) CloudCostAggregate {
+	return CloudCostAggregate{
+		Properties:        properties,
+		KubernetesPercent: kubernetesPercent,
+		Cost:              cost,
+		Credit:            credit,
+	}
+}
+
 func (cca *CloudCostAggregate) Clone() *CloudCostAggregate {
 	return &CloudCostAggregate{
 		Properties:        cca.Properties,
