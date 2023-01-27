@@ -86,12 +86,12 @@ type CloudCostAggregate struct {
 	NetCost           float64                      `json:"netCost"`
 }
 
-func NewCloudCostAggregate(properties CloudCostAggregateProperties, kubernetesPercent, cost, credit float64) CloudCostAggregate {
-	return CloudCostAggregate{
+func NewCloudCostAggregate(properties CloudCostAggregateProperties, kubernetesPercent, cost, netCost float64) *CloudCostAggregate {
+	return &CloudCostAggregate{
 		Properties:        properties,
 		KubernetesPercent: kubernetesPercent,
 		Cost:              cost,
-		Credit:            credit,
+		NetCost:           netCost,
 	}
 }
 
@@ -427,8 +427,13 @@ func (ccasr *CloudCostAggregateSetRange) LoadCloudCostAggregate(window Window, c
 }
 
 func (ccasr *CloudCostAggregateSetRange) Clone() *CloudCostAggregateSetRange {
-	ccasSlice := make([]*CloudCostAggregateSet, len(ccasr.CloudCostAggregateSets))
-	ccasSlice = append(ccasSlice, ccasr.CloudCostAggregateSets...)
+	//ccasSlice := []*CloudCostAggregateSet{}
+	var ccasSlice []*CloudCostAggregateSet
+	// ccasSlice = append(ccasSlice, ccasr.CloudCostAggregateSets...)
+
+	for _, ccas := range ccasr.CloudCostAggregateSets {
+		ccasSlice = append(ccasSlice, ccas.Clone())
+	}
 	return &CloudCostAggregateSetRange{
 		Window:                 ccasr.Window.Clone(),
 		CloudCostAggregateSets: ccasSlice,
